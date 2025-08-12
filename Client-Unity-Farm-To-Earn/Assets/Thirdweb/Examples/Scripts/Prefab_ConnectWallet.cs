@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Thirdweb;
 using System;
+using System.IO;
 using TMPro;
 using UnityEngine.UI;
 
@@ -52,7 +53,8 @@ public class Prefab_ConnectWallet : MonoBehaviour
 
     private void Awake()
     {
-        SDK = new ThirdwebSDK(chain.ToString().ToLower());
+        //SDK = new ThirdwebSDK(chain.ToString().ToLower());
+        SDK = new ThirdwebSDK("http://127.0.0.1:8545"); // Ganache RPC
     }
 
     // UI Initialization
@@ -100,7 +102,7 @@ public class Prefab_ConnectWallet : MonoBehaviour
                new WalletConnection()
                {
                    provider = GetWalletProvider(_wallet),
-                   chainId = GetChainID(chain),
+                   chainId = GetChainID("ganache"),
                });
 
             connectInfoText.text = chain;
@@ -117,12 +119,136 @@ public class Prefab_ConnectWallet : MonoBehaviour
             LogThirdweb($"Connected successfully to: {address}");
 
             DisconnectedState.SetActive(false);
+
+
+            string abiPath = Path.Combine(Application.dataPath, "Assets\\Abis", "FarmToEarn.json");
+
+            abiPath = @"[
+{
+""inputs"": [
+{
+""internalType"": ""contract IERC20"",
+""name"": ""_token"",
+""type"": ""address""
+},
+{
+""internalType"": ""contract IERC721"",
+""name"": ""_nft"",
+""type"": ""address""
+}
+],
+""stateMutability"": ""nonpayable"",
+""type"": ""constructor""
+},
+{
+""inputs"": [
+{
+""internalType"": ""address"",
+""name"": ""owner"",
+""type"": ""address""
+}
+],
+""name"": ""OwnableInvalidOwner"",
+""type"": ""error""
+},
+{
+""inputs"": [
+{
+""internalType"": ""address"",
+""name"": ""account"",
+""type"": ""address""
+}
+],
+""name"": ""OwnableUnauthorizedAccount"",
+""type"": ""error""
+},
+{
+""inputs"": [],
+""name"": ""ReentrancyGuardReentrantCall"",
+""type"": ""error""
+},
+{
+""anonymous"": false,
+""inputs"": [
+{
+""indexed"": true,
+""internalType"": ""address"",
+""name"": ""previousOwner"",
+""type"": ""address""
+},
+{
+""indexed"": true,
+""internalType"": ""address"",
+""name"": ""newOwner"",
+""type"": ""address""
+}
+],
+""name"": ""OwnershipTransferred"",
+""type"": ""event""
+},
+{
+""inputs"": [],
+""name"": ""owner"",
+""outputs"": [
+{
+""internalType"": ""address"",
+""name"": """",
+""type"": ""address""
+}
+],
+""stateMutability"": ""view"",
+""type"": ""function"",
+""constant"": true
+},
+{
+""inputs"": [],
+""name"": ""renounceOwnership"",
+""outputs"": [],
+""stateMutability"": ""nonpayable"",
+""type"": ""function""
+},
+{
+""inputs"": [
+{
+""internalType"": ""address"",
+""name"": ""newOwner"",
+""type"": ""address""
+}
+],
+""name"": ""transferOwnership"",
+""outputs"": [],
+""stateMutability"": ""nonpayable"",
+""type"": ""function""
+},
+{
+""inputs"": [],
+""name"": ""echo"",
+""outputs"": [
+{
+""internalType"": ""string"",
+""name"": """",
+""type"": ""string""
+}
+],
+""stateMutability"": ""pure"",
+""type"": ""function"",
+""constant"": true
+}
+]";
+           // string abiJson = File.ReadAllText(abiPath);
+
+            var contract = SDK.GetContract("0x2Dd3f79acb77D3aD885438d8B4288Baa0158ed23", abiPath);
+
+            var result = await contract.Read<string>("echo");
+            Debug.Log("Contract Name: " + result);
+            ConnectedState.GetComponent<TextMeshProUGUI>().SetText($"{result}");
             ConnectedState.SetActive(true);
         }
         catch (Exception e)
         {
             LogThirdweb($"Error Connecting Wallet: {e.Message}");
         }
+
     }
 
     // Disconnecting
@@ -213,6 +339,8 @@ public class Prefab_ConnectWallet : MonoBehaviour
                 return 56;
             case "binance-testnet":
                 return 97;
+            case "ganache":
+                return 1337;
             default:
                 throw new UnityException($"Chain ID for chain {_chain} unimplemented!");
         }
